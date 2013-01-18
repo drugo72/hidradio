@@ -67,7 +67,7 @@
 //! This function reset the internal CPU core clock prescaler
 //!
 #ifdef  __GNUC__
-   #define Clear_prescaler()                       (clock_prescale_set(0))
+   #define Clear_prescaler()                       clock_prescale_set(0)
 #else
    #define Clear_prescaler()                       (Set_cpu_prescaler(0))
 #endif
