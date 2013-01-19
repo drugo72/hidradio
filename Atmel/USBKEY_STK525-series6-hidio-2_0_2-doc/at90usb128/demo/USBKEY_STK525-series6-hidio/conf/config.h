@@ -62,14 +62,15 @@
 #include "conf/conf_scheduler.h" //!< Scheduler tasks declaration
 
 // Board defines (do not change these settings)
-#define  STK525   1
-#define  USBKEY   2
+#define  STK525     1
+#define  USBKEY     2
+#define  RZUSBSTICK 3
 
 //! Enable or not the ADC usage
 #undef USE_ADC
 //! To include proper target hardware definitions, select
-//! target board (USBKEY or STK525)
-#define TARGET_BOARD STK525
+//! target board (USBKEY, STK525 or RZUSBSTICK)
+#define TARGET_BOARD RZUSBSTICK
 
 #if (TARGET_BOARD==USBKEY)
    //! @warning for #define USBKEY_HAS_321_DF, only first prototypes versions have AT45DB321C memories
@@ -78,6 +79,8 @@
    #include "lib_board\usb_key\usb_key.h"
 #elif (TARGET_BOARD==STK525)
    #include "lib_board\stk_525\stk_525.h"
+#elif (TARGET_BOARD==RZUSBSTICK)
+   #include "lib_board\rzusbstick\rzusbstick.h"
 #else
    #error TARGET_BOARD must be defined somewhere
 #endif
