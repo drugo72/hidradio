@@ -1,0 +1,39 @@
+/**
+ * @file Star_Example.txt
+ *
+ * @brief  Introduction of the MAC Example "Star"
+ *
+ * $Id: Star_Push_Button.txt 21973 2010-04-30 10:15:13Z sschneid $
+ *
+ * @author    Atmel Corporation: http://www.atmel.com
+ * @author    Support email: avr@atmel.com
+ */
+/*
+ * Copyright (c) 2008, Atmel Corporation All rights reserved.
+ *
+ * Licensed under Atmel’s Limited License Agreement --> EULA.txt
+ */
+
+MAC Example - Star
+
+
+Setup
+=====
+The firmware for the MAC example "Star" can be created in three ways: Using the corresponding Makefile directly, executing the Makefile from the AVR Studio or building it from the IAR EWW.
+Two nodes are involved in this example. Both nodes are operated using the same firmware.
+
+
+Operation
+=========
+The first node searching for existing networks, and if no existing network is found on the default channel,
+this nodes becomes the PAN Coodinator and creates a nonbeacon-enable network. This node has its receiver always
+enabled.
+
+Other nodes that find an already existing network, associate with the PAN Coordiantor and End Devices, and go
+to both MCU and transceiver sleep. Once the button is pressed, the End Devices wake up again and send
+data frames to the PAN Coordinator every 200ms. If the button is release again, the node goes to full
+sleep again.
+Please note that during sleep no timer is running at the MCU.
+
+
+

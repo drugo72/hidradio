@@ -183,14 +183,14 @@ void usb_user_endpoint_init(U8 conf_nb)
    usb_configure_endpoint( EP_HID_IN,   \
                            TYPE_INTERRUPT,\
                            DIRECTION_IN,  \
-                           SIZE_8,        \
+                           SIZE_64,	  \
                            ONE_BANK,      \
                            NYET_ENABLED);
 
    usb_configure_endpoint( EP_HID_OUT,    \
                            TYPE_INTERRUPT,\
                            DIRECTION_OUT, \
-                           SIZE_8,        \
+                           SIZE_64,       \
                            ONE_BANK,      \
                            NYET_ENABLED);
 }

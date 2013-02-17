@@ -62,7 +62,9 @@ typedef unsigned char       Bool;
 
 typedef U8                  Status;
 typedef Bool                Status_bool;
+#ifndef bool
 #define bool                Bool
+#endif
 #define PASS 0
 #define FAIL 1
 
@@ -259,8 +261,12 @@ typedef char      r_uart_ptchar;
 #define DISABLE  0
 #define FALSE   (0==1)
 #define TRUE    (1==1)
+#ifndef true
 #define true    TRUE
+#endif /* true */
+#ifndef false
 #define false   FALSE
+#endif /* false */
 
 
 #define KO      0
@@ -351,7 +357,9 @@ typedef char      r_uart_ptchar;
               bit of sfr register
   example : if (bit_is_clear(PORTB,PORTB3)) ...
 ************************************************************/
+#ifndef bit_is_clear
 #define bit_is_clear(PORT,POSITION) ((PORT & (1<<POSITION)) == 0 )
+#endif /* bit_is_clear */
 
 /***********************************************************
  bit_is_set macro
@@ -361,8 +369,9 @@ typedef char      r_uart_ptchar;
               bit of sfr register
   example : if (bit_is_set(PORTB,PORTB3)) ...
 ************************************************************/
+#ifndef bit_is_set
 #define bit_is_set(PORT,POSITION) ((PORT & (1<<POSITION)) != 0 )
-
+#endif /* bit_is_set */
 
 
 
@@ -382,7 +391,7 @@ typedef char      r_uart_ptchar;
 #define code PROGMEM
 #define xdata
 #define idata
-#define data
+//#define data
 #define At(x) @ x
 #define pdata
 #define bdata

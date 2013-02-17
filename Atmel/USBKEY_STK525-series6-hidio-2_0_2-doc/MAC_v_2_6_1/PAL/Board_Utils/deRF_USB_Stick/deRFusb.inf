@@ -1,0 +1,44 @@
+
+[Version]                                                       ; Version section
+Signature="$Chicago$"                                           ; All Windows versions
+Class=Ports                                                     ; This is a serial port driver
+ClassGuid={4D36E978-E325-11CE-BFC1-08002BE10318}                ; Associated GUID
+Provider=%DE%                                                   ; Driver is provided by dresden elektronik
+DriverVer=09/12/2006,1.1.1.5                                    ; Driver version 1.1.1.5 published on 23 February 2007
+
+[DestinationDirs]                                               ; DestinationDirs section
+DefaultDestDir=12                                               ; Default install directory is \drivers or \IOSubSys
+
+[Manufacturer]                                                  ; Manufacturer section
+%DE%=DeMfg                                                      ; Only one manufacturer (DE), models section is named
+                                                                ; DeMfg
+
+[DeMfg]                                                         ; Models section corresponding to DE
+%USBtoSerialConverter%=USBtoSer.Install,USB\VID_1cf1&PID_0015   ; Identifies a device with DE Vendor ID (1cf1h) and
+                                                                ; Product ID equal to 0014h. Corresponding Install section
+                                                                ; is named USBtoSer.Install
+
+[USBtoSer.Install]                                              ; Install section
+include=mdmcpq.inf
+CopyFiles=FakeModemCopyFileSection
+AddReg=USBtoSer.AddReg                                          ; Registry keys to add are listed in USBtoSer.AddReg
+
+[USBtoSer.AddReg]                                               ; AddReg section
+HKR,,DevLoader,,*ntkern                                         ;
+HKR,,NTMPDriver,,usbser.sys
+HKR,,EnumPropPages32,,"MsPorts.dll,SerialPortPropPageProvider"
+
+[USBtoSer.Install.Services]                                     ; Services section
+AddService=usbser,0x00000002,USBtoSer.AddService                ; Assign usbser as the PnP driver for the device
+
+[USBtoSer.AddService]                                           ; Service install section
+DisplayName=%USBSer%                                            ; Name of the serial driver
+ServiceType=1                                                   ; Service kernel driver
+StartType=3                                                     ; Driver is started by the PnP manager
+ErrorControl=1                                                  ; Warn about errors
+ServiceBinary=%12%\usbser.sys                                   ; Driver filename
+
+[Strings]                                                       ; Strings section
+DE="dresden elektronik."                                        ; String value for the DE symbol
+USBtoSerialConverter="deRFusb"	                       		; String value for the USBtoSerialConverter symbol
+USBSer="USB Serial Driver"                                      ; String value for the USBSer symbol

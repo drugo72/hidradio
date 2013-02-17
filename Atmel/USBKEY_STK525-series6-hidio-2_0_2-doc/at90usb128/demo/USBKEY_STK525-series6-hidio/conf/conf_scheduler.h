@@ -53,7 +53,8 @@
 #define Scheduler_task_2_init   hid_task_init
 #define Scheduler_task_2        hid_task
 
-
+#define Scheduler_task_3_init   radio_phy_task_init
+#define Scheduler_task_3        radio_phy_task
 
 
 

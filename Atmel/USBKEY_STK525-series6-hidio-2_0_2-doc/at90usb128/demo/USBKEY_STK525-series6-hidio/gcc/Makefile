@@ -14,7 +14,7 @@ COMMON = -mmcu=$(MCU)
 
 # Compile options common for all C compilation units.
 CFLAGS = $(COMMON)
-CFLAGS += -Wall -gdwarf-2 -Os -fsigned-char -ffunction-sections
+CFLAGS += -Wall -gdwarf-2 -Os -fsigned-char -ffunction-sections -std=c99
 CFLAGS += -MD -MP -MT $(OUTPUT)/$(*F).o -MF $(OUTPUT)/dep/$(@F).d 
 
 # Assembly specific flags
@@ -39,6 +39,8 @@ INCLUDES = -I"./.." -I"../conf" -I"../../.." -I"../../../../at90usb128" -I"../..
 # Include Source files list and part informations
 include $(MAKECFG)
 
+#include Makefile_RzUsbStick_AT90usb1287_Rf230.include
+include Makefile.include
 
 ## Build
 .PHONY: all
@@ -69,7 +71,7 @@ objfiles: $(OBJECTS)
 	@$(shell mkdir $(OUTPUT) 2>/dev/null)
 	@$(shell mkdir $(OUTPUT)/dep 2>/dev/null)
 	@$(CC) $(INCLUDES) $(CFLAGS) -c $< -o $(OUTPUT)/$(@F)
-	
+
 # Preprocess & assemble: create object files from assembler source files.
 %.o: %.s
 	@echo 'Building file: $<'

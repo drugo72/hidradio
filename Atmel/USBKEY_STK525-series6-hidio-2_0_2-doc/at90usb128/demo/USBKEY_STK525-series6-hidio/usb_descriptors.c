@@ -188,6 +188,7 @@ code S_usb_hid_report_descriptor usb_hid_report_descriptor = {{
       0x09, 0x03,               // 08|1   , Usage      (vendordefined)
       0x15, 0x00,               // 14|1   , Logical Minimum(0 for signed byte?)
       0x26 ,0xFF,0x00,           // 24|1   , Logical Maximum(255 for signed byte?)
+      0x85, 0x01,               //        , Report ID 1
       0x75, 0x08,               // 74|1   , Report Size(8) = field size in bits = 1 byte
       0x95, LENGTH_OF_REPORT_IN,   // 94|1:ReportCount(size) = repeat count of previous item
       0x81, 0x02,               // 80|1: IN report (Data,Variable, Absolute)
