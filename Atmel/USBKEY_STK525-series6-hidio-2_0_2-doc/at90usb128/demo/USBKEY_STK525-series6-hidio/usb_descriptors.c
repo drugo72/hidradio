@@ -188,18 +188,41 @@ code S_usb_hid_report_descriptor usb_hid_report_descriptor = {{
       0x09, 0x03,               // 08|1   , Usage      (vendordefined)
       0x15, 0x00,               // 14|1   , Logical Minimum(0 for signed byte?)
       0x26 ,0xFF,0x00,           // 24|1   , Logical Maximum(255 for signed byte?)
-      0x85, 0x01,               //        , Report ID 1
+      0x85, 0x01,               // CDA     , Report ID 1
       0x75, 0x08,               // 74|1   , Report Size(8) = field size in bits = 1 byte
       0x95, LENGTH_OF_REPORT_IN,   // 94|1:ReportCount(size) = repeat count of previous item
       0x81, 0x02,               // 80|1: IN report (Data,Variable, Absolute)
+
+      // CDA IN report. count 126
+      0x09, 0x02,               // 08|1   , Usage      (vendordefined)
+      0x09, 0x03,               // 08|1   , Usage      (vendordefined)
+      0x15, 0x00,               // 14|1   , Logical Minimum(0 for signed byte?)
+      0x26 ,0xFF,0x00,           // 24|1   , Logical Maximum(255 for signed byte?)
+      0x85, 0x02,               // CDA     , Report ID 2
+      0x75, 0x08,               // 74|1   , Report Size(8) = field size in bits = 1 byte
+      0x95, 126,   // 94|1:ReportCount(size) = repeat count of previous item
+      0x81, 0x02,               // 80|1: IN report (Data,Variable, Absolute)
+
       // OUT report
       0x09, 0x04,               // 08|1   , Usage      (vendordefined)
       0x09, 0x05,               // 08|1   , Usage      (vendordefined)
       0x15, 0x00,               // 14|1   , Logical Minimum(0 for signed byte?)
       0x26, 0xFF,0x00,           // 24|1   , Logical Maximum(255 for signed byte?)
+      0x85, 0x01,               // CDA     , Report ID 1
       0x75, 0x08,               // 74|1   , Report Size(8) = field size in bits = 1 byte
       0x95, LENGTH_OF_REPORT_OUT,   // 94|1:ReportCount(size) = repeat count of previous item
       0x91, 0x02,               // 90|1: OUT report (Data,Variable, Absolute)
+
+      // CDA OUT report. count: 126 
+      0x09, 0x04,               // 08|1   , Usage      (vendordefined)
+      0x09, 0x05,               // 08|1   , Usage      (vendordefined)
+      0x15, 0x00,               // 14|1   , Logical Minimum(0 for signed byte?)
+      0x26, 0xFF,0x00,           // 24|1   , Logical Maximum(255 for signed byte?)
+      0x85, 0x02,               // CDA     , Report ID 2
+      0x75, 0x08,               // 74|1   , Report Size(8) = field size in bits = 1 byte
+      0x95, 126,                // 94|1:ReportCount(size) = repeat count of previous item
+      0x91, 0x02,               // 90|1: OUT report (Data,Variable, Absolute)
+
       // Feature report
       0x09, 0x06,               // 08|1   , Usage      (vendordefined)
       0x09, 0x07,               // 08|1   , Usage      (vendordefined)

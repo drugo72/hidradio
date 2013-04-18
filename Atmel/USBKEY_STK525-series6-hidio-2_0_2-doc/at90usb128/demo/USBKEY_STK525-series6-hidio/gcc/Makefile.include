@@ -39,7 +39,7 @@ PATH_GLOB_INC = $(PATH_ROOT)/Include
 # CFLAGS += -Wall -Werror -g -Wundef -std=c99 -Os
 # CFLAGS += -MD -MP -MT $(*F).o -MF dep/$(@F).d
 
-CFLAGS += -DSNIFFER
+#CFLAGS += -DSNIFFER
 CFLAGS += -DDEBUG=0
 CFLAGS += -DENABLE_TSTAMP
 CFLAGS += -DPROMISCUOUS_MODE

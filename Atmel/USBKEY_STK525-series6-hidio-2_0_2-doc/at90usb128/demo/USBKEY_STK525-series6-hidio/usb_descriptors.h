@@ -110,7 +110,7 @@
 #define EP_SIZE_2           EP_OUT_LENGTH
 #define EP_INTERVAL_2       1 //interrupt pooling from host
 
-#define SIZE_OF_REPORT        0x37
+#define SIZE_OF_REPORT        (0x39 + 17 + 17)
 #define LENGTH_OF_REPORT_IN   62
 #define LENGTH_OF_REPORT_OUT  62
 
