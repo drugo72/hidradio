@@ -58,6 +58,8 @@
 #include "qmm.h"
 #include "ieee_const.h"
 
+#include "hidradio.h"
+
 //_____ M A C R O S ________________________________________________________
 
 
@@ -66,133 +68,6 @@
 
 //_____ D E C L A R A T I O N S ____________________________________________
 
-#define HR_TYPE_GET_REQ 0x00
-#define HR_TYPE_GET_CNF 0x01
-
-#define HR_TYPE_SET_REQ 0x02
-#define HR_TYPE_SET_CNF 0x03
-
-#define HR_TYPE_DATA_REQ 0x08
-#define HR_TYPE_DATA_CNF 0x09
-
-#define HR_TYPE_DATA_IND 0x0a
-
-#define HR_TYPE_ECHO_REQ 0x20
-#define HR_TYPE_ECHO_RESP 0x21
-
-#define HR_TYPE_UNSUPPORTED_MSG 0xff
-
-
-
-#define HR_STATUS_SUCCESS 0x00
-#define HR_STATUS_CHANNEL_ACCESS_FAILURE 0xe1
-#define HR_STATUS_NO_ACK 0xe9
-#define HR_STATUS_INVALID_PARAMETER 0xe8
-#define HR_STATUS_UNSUPPORTED_ATTRIBUTE 0xf4
-
-#define HR_ATTR_PHY_CURRENT_CHANNEL 0x00
-#define HR_ATTR_PHY_CHANNELS_SUPPORTED 0x01
-#define HR_ATTR_PHY_TRANSMIT_POWER 0x02
-#define HR_ATTR_PHY_CCA_MODE 0x03
-
-#define HR_ATTR_MAC_MAX_CSMA_BACKOFFS 0x4e
-#define HR_ATTR_MAC_MIN_BE 0x4f
-#define HR_ATTR_MAC_MAX_FRAME_RETRIES 0x59
-#define HR_ATTR_MAC_PAN_ID 0x50
-#define HR_ATTR_MAC_PROMISCUOUS_MODE 0x51
-#define HR_ATTR_MAC_RX_ON_WHEN_IDLE 0x52
-#define HR_ATTR_MAC_SHORT_ADDRESS 0x53
-
-/* TODO: In order to operate properly, the transceiver needs to know if we are the coordinator */
-
-
-typedef struct {
-  uint8_t attr_id;
-  uint8_t attr_val[1];
-} hr_set_req_t;
-
-typedef struct {
-uint8_t status;
-uint8_t attr_id;
-} hr_set_cnf_t;
-
-typedef struct {
-uint8_t attr_id;
-} hr_get_req_t;
-
-typedef struct {
-uint8_t status;
-uint8_t attr_id;
-uint8_t attr_val[1];
-} hr_get_cnf_t;
-
-
-#define HR_TX_OPTS_CSMA_CA 0x01
-#define HR_TX_OPTS_ACK_REQ 0x02
-typedef struct {
-  uint8_t tx_opts; /* bitmap of HR_TX_OPTS_CSMA_CA, HR_TX_OPTS_ACK_REQ */
-  uint8_t psdu_len;
-  uint8_t psdu[1]; // Placeholder for PSDU. MPDU's FCS is computed by hw and MUST NOT be included.
-} hr_data_req_t;
-
-typedef struct {
-  // The values are non-standard.
-  // The enhanced tranceiver RX state is controlled by the MIB attribute macRxOnWhenIdle.
-  // so it's OK to issue a data request at any time. The transceiver takes care of turning the
-  // receiver off and, if the case, turning it on at the end of transmission
-  // (in other words, TRX_OFF or RX_ON never happen).
-  // If the data request was issued with no tx_opts the only status possible is SUCCESS.
-  // Otherwise, other than SUCCESS, the status can be either CHANNEL_ACCESS_FAILURE (HR_TX_OPTS_CSMA_CA set) or NO_ACK (HR_TX_OPTS_ACK_REQ set).
-  uint8_t status;
-} hr_data_cnf_t;
-
-typedef struct {
-  uint8_t timestamp[4]; // Non-standard
-  uint8_t lqi;
-  uint8_t psdu_len;
-  uint8_t psdu[1]; // Placeholder for PSDU. MPDU's FCS is checked by hw and is not included.
-} hr_data_ind_t;
-
-typedef struct {
-  uint8_t type;
-  union {
-    hr_data_req_t data_req;
-    hr_data_cnf_t data_cnf;
-    hr_data_ind_t data_ind;
-    hr_set_req_t set_req;
-    hr_set_cnf_t set_cnf;
-    hr_get_req_t get_req;
-    hr_get_cnf_t get_cnf;
-  } data;
-} hr_msg_t;
-
-typedef struct {
-  uint8_t id;
-  hr_msg_t msg;
-} hr_report_t;
-
-static uint16_t in_nleft = 0;
-static uint16_t out_nleft = 0;
-
-#define U32TONA(s, d) do {(d)[0] = (s) & 0xff; (d)[1] = ((s) >> 8) & 0xff; (d)[2] = ((s) >> 16) & 0xff; (d)[3] = ((s) >> 24) & 0xff;} while(0)
-
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-
-// TODO? The longest report length can be made a multiple of the EP size (does not require an extra ZLP)
-
-// TODO? According to this:
-// http://www.microchip.com/forums/m485841.aspx
-// The host does not send ZLP for reports whose length is a multiple of the EP size.
-// Thus the OUT report lengths might be 64, 128 etc. 
-
-/* Report length = (report ID * 64) - 1 */
-#define REPORT_LEN(id) (((uint16_t)(id) << 6) - 1)
-#define MSG_DATA_LEN(id) (REPORT_LEN((id)) - (offsetof(hr_report_t, msg) - offsetof(hr_msg_t, data)))
-
-#define MAX_REPORT_ID 3
-
-#define MAX_REPORT_LEN REPORT_LEN(MAX_REPORT_ID)
-#define MAX_MSG_DATA_LEN MSG_DATA_LEN(MAX_REPORT_ID)
 
 /* Define a max len report */
 static union {
@@ -221,10 +96,15 @@ static queue_t rx_queue;
 
 static union {
   frame_info_t frame_info;
-  uint8_t buf[sizeof(frame_info_t) + 1 /* PSDU length */ + 127 - 2 /* FCS */];
+  uint8_t buf[sizeof(frame_info_t) + 1 /* PSDU length */ + 127 - 2 /* FCS */ + 1 /* LQI */ + 1 /* ED level */];
 } frame_info_buf;
 
 static frame_info_t * const frame_infop = &frame_info_buf.frame_info;
+
+static uint16_t in_nleft = 0;
+static uint16_t out_nleft = 0;
+
+static uint8_t rx_on_when_idle = true;
 
 static volatile uint8_t cpt_sof=0;
 
@@ -268,7 +148,16 @@ void hid_task(void)
    recv_out_report();
    send_response();
    send_queued_frame();
-   send_in_report();
+   send_in_report(); 
+}
+
+void do_rx_on_when_idle(void)
+{
+   if (rx_on_when_idle) {
+     tal_rx_enable(PHY_RX_ON);
+   } else {
+     tal_rx_enable(PHY_TRX_OFF);
+   }
 }
 
 void send_response(void)
@@ -293,6 +182,7 @@ void sof_action()
 void tal_rx_frame_cb(frame_info_t *rx_frame)
 {
   qmm_queue_append(&rx_queue, rx_frame->buffer_header);
+  do_rx_on_when_idle();
 }
 
 void tal_tx_frame_done_cb(retval_t status, frame_info_t *frame)
@@ -301,33 +191,39 @@ void tal_tx_frame_done_cb(retval_t status, frame_info_t *frame)
 
   resp_reportp = &resp_report_buf.report;
 
-  resp_reportp->id = 0;
+  resp_reportp->id = 1;
   resp_reportp->msg.type = HR_TYPE_DATA_CNF;
   cnfp = &resp_reportp->msg.data.data_cnf;
   cnfp->status = status;
+
+  do_rx_on_when_idle();
 }
 
 void send_queued_frame(void)
 {
   if (!is_sending_in_report()) {
     buffer_t *buf;
-    frame_info_t *rx_frame;
+    frame_info_t *rx_framep;
 
     buf = qmm_queue_remove(&rx_queue, NULL);
     if (buf == NULL) {
       return;
     }
 
-    rx_frame = (frame_info_t*)BMM_BUFFER_POINTER(buf);
+    rx_framep = (frame_info_t*)BMM_BUFFER_POINTER(buf);
 
-    if (rx_frame != NULL) {
+    if (rx_framep != NULL) {
       uint8_t data_len;
       uint8_t report_id;
       uint8_t psdu_len;
       uint16_t min_required;
       hr_data_ind_t *indp = &in_reportp->msg.data.data_ind;
+      uint8_t lqi;
+      uint8_t ed_level;
 
-      psdu_len = rx_frame->mpdu[0];
+      psdu_len = rx_framep->mpdu[0];
+      lqi = rx_framep->mpdu[psdu_len + 1];
+      ed_level = rx_framep->mpdu[psdu_len + 2];
   
       data_len = offsetof(hr_data_ind_t, psdu) + psdu_len;
 
@@ -345,10 +241,10 @@ void send_queued_frame(void)
 
       in_reportp->msg.type = HR_TYPE_DATA_IND;
 
-      indp->lqi = 0xAA; // FIXME  
-      U32TONA(rx_frame->time_stamp, indp->timestamp);
+      indp->lqi = lqi; // or ed_level?
+      U32TONA(rx_framep->time_stamp, indp->timestamp);
       indp->psdu_len = psdu_len;
-      memcpy(indp->psdu, &rx_frame->mpdu[1], psdu_len);
+      memcpy(indp->psdu, &rx_framep->mpdu[1], psdu_len);
   
       start_send_in_report();
 
@@ -356,7 +252,7 @@ void send_queued_frame(void)
 
     cleanup:
       /* free buffer that was used for frame reception */
-      bmm_buffer_free(rx_frame->buffer_header);
+      bmm_buffer_free(rx_framep->buffer_header);
     }
   } 
 }
@@ -455,9 +351,61 @@ void recv_out_report(void)
   }
 }
 
+bool is_supported_attr_id(uint8_t attr_id)
+{
+  if (attr_id == HR_ATTR_PHY_CURRENT_CHANNEL ||
+      attr_id == HR_ATTR_PHY_CHANNELS_SUPPORTED ||
+      attr_id == HR_ATTR_PHY_TRANSMIT_POWER ||
+      attr_id == HR_ATTR_PHY_CCA_MODE ||
+      attr_id == HR_ATTR_MAC_MAX_CSMA_BACKOFFS ||
+      attr_id == HR_ATTR_MAC_MIN_BE ||
+      attr_id == HR_ATTR_MAC_MAX_FRAME_RETRIES ||
+      attr_id == HR_ATTR_MAC_PAN_ID ||
+      attr_id == HR_ATTR_MAC_PROMISCUOUS_MODE ||
+      attr_id == HR_ATTR_MAC_RX_ON_WHEN_IDLE ||
+      attr_id == HR_ATTR_MAC_SHORT_ADDRESS ||
+      attr_id == HR_ATTR_I_AM_COORD) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void do_get_req(void)
+{
+  retval_t retval;
+  hr_get_req_t *reqp;
+  hr_get_cnf_t *cnfp;
+
+  reqp = &out_reportp->msg.data.get_req;
+
+  resp_reportp = &resp_report_buf.report;
+  resp_reportp->id = 1;
+  resp_reportp->msg.type = HR_TYPE_GET_CNF;
+
+  cnfp = &resp_reportp->msg.data.get_cnf;
+  
+  if (is_supported_attr_id(reqp->attr_id)) {
+    if (reqp->attr_id == HR_ATTR_MAC_RX_ON_WHEN_IDLE) {
+      cnfp->attr_val[0] = rx_on_when_idle;
+      retval = HR_STATUS_SUCCESS;
+    } else {
+      retval = tal_pib_get(reqp->attr_id, cnfp->attr_val);
+    }
+    if (retval == TAL_BUSY) {
+      /* TODO: this should never happen (internal error) */
+    }
+  } else {
+    retval = HR_STATUS_UNSUPPORTED_ATTRIBUTE;
+  }
+
+  cnfp->status = retval;
+  cnfp->attr_id = reqp->attr_id;
+}
+
 void do_set_req(void)
 {
-  retval_t retval = HR_STATUS_UNSUPPORTED_ATTRIBUTE;
+  retval_t retval;
   hr_set_req_t *reqp;
   hr_set_cnf_t *cnfp;
 
@@ -469,39 +417,39 @@ void do_set_req(void)
 
   cnfp = &resp_reportp->msg.data.set_cnf;
 
-  switch(reqp->attr_id) {
-  case HR_ATTR_PHY_CURRENT_CHANNEL:
-    retval = tal_pib_set(phyCurrentChannel, (pib_value_t*)&reqp->attr_val[0]);
-    break;
-  case HR_ATTR_PHY_CHANNELS_SUPPORTED:
-    break;
-  case HR_ATTR_PHY_TRANSMIT_POWER:
-    break;
-  case HR_ATTR_PHY_CCA_MODE:
-    break;
-    // MAC PIB attributes
-  case HR_ATTR_MAC_MAX_CSMA_BACKOFFS:
-    break;
-  case HR_ATTR_MAC_MIN_BE:
-    break;
-  case HR_ATTR_MAC_MAX_FRAME_RETRIES:
-    break;
-  case HR_ATTR_MAC_PAN_ID:
-    break;
-  case HR_ATTR_MAC_PROMISCUOUS_MODE:
-    retval = tal_pib_set(macPromiscuousMode, (pib_value_t*)&reqp->attr_val[0]);
-    break;
-  case HR_ATTR_MAC_RX_ON_WHEN_IDLE:
-    break;
-  case HR_ATTR_MAC_SHORT_ADDRESS:
-    break;
-  default:
-    retval = HR_STATUS_UNSUPPORTED_ATTRIBUTE;
-    break;
-  }
+  if (is_supported_attr_id(reqp->attr_id)) {
+    if (reqp->attr_id == HR_ATTR_MAC_RX_ON_WHEN_IDLE) {
+      rx_on_when_idle = reqp->attr_val[0];
+      do_rx_on_when_idle(); // Should be done also here or only at the end of a TRX task? (2003 spec)
+      retval = HR_STATUS_SUCCESS;
+    } else {
+      retval = tal_pib_set(reqp->attr_id, (pib_value_t*)reqp->attr_val);
+      if (reqp->attr_id == HR_ATTR_MAC_PROMISCUOUS_MODE) {
+	// TODO: this request affects/is affected by the value of rxOnWhenIdle.
+	// Anyway the behavior differs between 2003 and 2006 spec.
 
-  if (retval == TAL_BUSY) {
-    /* TODO: this should never happen (internal error) */
+#if 1
+	// 2003 spec.
+	rx_on_when_idle = reqp->attr_val[0];
+#else
+	// 2006 spec.
+	if (reqp->attr_val[0] == 0) {
+	  // Set the TRX state accordingly to the value of rxOnWhenIdle
+	  
+	  // We only need to reenable RX (tal_pib_set set TRX off)
+	  if (rx_on_when_idle) {
+	    tal_rx_enable(PHY_RX_ON);
+	  }
+	}
+#endif 
+      }
+    }
+    
+    if (retval == TAL_BUSY) {
+      /* TODO: this should never happen (internal error) */
+    }
+  } else {
+    retval = HR_STATUS_UNSUPPORTED_ATTRIBUTE;
   }
 
   cnfp->status = retval;
@@ -510,30 +458,27 @@ void do_set_req(void)
 
 void do_data_req(void)
 {
-  hr_data_req_t *reqp = &out_reportp->msg.data.data_req;
-  bool perform_frame_retry = false;
-  csma_mode_t csma_mode = NO_CSMA_NO_IFS; // USB latency should be enough
+  hr_data_req_t *reqp;
   retval_t retval;
 
-  if ((reqp->tx_opts & HR_TX_OPTS_CSMA_CA) != 0) {
-    csma_mode = CSMA_UNSLOTTED;
-  }
+  reqp = &out_reportp->msg.data.data_req;
 
-  if ((reqp->tx_opts & HR_TX_OPTS_ACK_REQ) != 0) {
-    perform_frame_retry = true;
-  }
+  if ((reqp->tx_opts & HR_TX_OPTS_WITHOUT_CSMA_CA) != 0) {
+    /* TODO */
+    tal_tx_frame_done_cb(HR_STATUS_INVALID_PARAMETER, NULL);
+  } else {
+    /* First byte is the PSDU length */
+    frame_infop->mpdu[0] = reqp->psdu_len;
+    memcpy(&frame_infop->mpdu[1], reqp->psdu, reqp->psdu_len);
 
-  /* First byte is the PSDU length */
-  frame_infop->mpdu[0] = reqp->psdu_len;
-  memcpy(&frame_infop->mpdu[1], reqp->psdu, reqp->psdu_len);
+    retval = tal_tx_frame(frame_infop,
+			  CSMA_UNSLOTTED,
+			  true);
 
-  retval = tal_tx_frame(frame_infop,
-                        csma_mode,
-                        perform_frame_retry);
-
-  if (retval == TAL_BUSY) {
-    /* TODO: this should never happen (internal error) */
-    tal_tx_frame_done_cb(retval, NULL);
+    if (retval == TAL_BUSY) {
+      /* TODO: this should never happen (internal error) */
+      tal_tx_frame_done_cb(retval, NULL);
+    }
   }
 }
 
@@ -568,7 +513,7 @@ void do_handle_report(void)
 
   switch (out_reportp->msg.type) {
   case HR_TYPE_GET_REQ:
-    do_handle_default();
+    do_get_req();
     break;
   case HR_TYPE_SET_REQ:
     do_set_req();
