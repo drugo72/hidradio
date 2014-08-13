@@ -178,7 +178,7 @@ code S_usb_language_id usb_user_language_id = {
 , Usb_write_word_enum_struc(LANGUAGE_ID)
 };
 
-
+#if 0
 code S_usb_hid_report_descriptor usb_hid_report_descriptor = {{
       0x06, 0xFF, 0xFF,         // 04|2   , Usage Page (vendordefined?)
       0x09, 0x01,               // 08|1   , Usage      (vendordefined
@@ -233,4 +233,48 @@ code S_usb_hid_report_descriptor usb_hid_report_descriptor = {{
       0xB1, 0x02,               // B0|1:   Feature report
       0xC0                      // C0|0    , End Collection
  }};
-
+#else
+code S_usb_hid_report_descriptor usb_hid_report_descriptor = {{
+      0x06, 0x00, 0xFF,         // 04|2 Usage Page (Vendor Defined)
+      0x09, 0x01,               // 08|1 Usage (Vendor Usage 1)
+      0xA1, 0x01,               // A0|1 Collection (Application)
+      0x15, 0x00,               // 14|1 Logical Minimum (0)
+      0x26 ,0xFF, 0x00,         // 24|1 Logical Maximum (255)
+      0x75, 0x08,               // 74|1 Report Size (8)
+      // Input Report
+      0x09, 0x01,               // 08|1 Usage (Vendor Usage 1)
+      0x85, 0x01,               // 84|1 Report ID (1)
+      0x95, 62,                 // 94|1 Report Count (62)
+      0x81, 0x02,               // 80|1 Input Report (Data, Variable, Absolute)
+      // Input Report
+      0x09, 0x01,               // 08|1 Usage (Vendor Usage 1)
+      0x85, 0x02,               // 84|1 Report ID (2)
+      0x95, 126,                // 94|1 Report Count (126)
+      0x81, 0x02,               // 80|1 Input Report (Data, Variable, Absolute)
+      // Input Report
+      0x09, 0x01,               // 08|1 Usage (Vendor Usage 1)
+      0x85, 0x03,               // 84|1 Report ID (3)
+      0x95, 191,                // 94|1 Report Count (191)
+      0x81, 0x02,               // 80|1 Input Report (Data, Variable, Absolute)
+      // Output Report
+      0x09, 0x01,               // 08|1 Usage (Vendor Usage 1)
+      0x85, 0x01,               // 84|1 Report ID (1)
+      0x95, 63,                 // 94|1 Report Count (63)
+      0x91, 0x02,               // 90|1 Output Report (Data, Variable, Absolute)
+      // Output Report
+      0x09, 0x01,               // 08|1 Usage (Vendor Usage 1)
+      0x85, 0x02,               // 84|1 Report ID (2)
+      0x95, 127,                // 94|1 Report Count (127)
+      0x91, 0x02,               // 90|1 Output Report (Data, Variable, Absolute)
+      // Output Report
+      0x09, 0x01,               // 08|1 Usage (Vendor Usage 1)
+      0x85, 0x03,               // 84|1 Report ID (3)
+      0x95, 191,                // 94|1 Report Count (191)
+      0x91, 0x02,               // 90|1 Output Report (Data, Variable, Absolute)
+      // Feature Report
+      0x09, 0x01,               // 08|1 Usage (Vendor Usage 1)
+      0x95, 0x04,               // 94|1 Report Count (4)
+      0xB1, 0x02,               // B0|1 Feature Report
+      0xC0                      // C0|0 End Collection
+ }};
+#endif /* 0 */

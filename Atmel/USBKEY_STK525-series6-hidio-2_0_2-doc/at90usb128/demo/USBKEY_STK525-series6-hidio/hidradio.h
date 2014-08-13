@@ -53,6 +53,7 @@
 
 /* TODO: In order to operate properly, the transceiver needs to know if we are the coordinator */
 #define HR_ATTR_I_AM_COORD 0x0B
+#define HR_ATTR_MAC_IEEE_ADDRESS 0xf0
 
 typedef struct {
   uint8_t attr_id;
@@ -120,18 +121,50 @@ typedef struct {
  * Copies a 32 bit unsigned integer to a byte array in network order
  * (little endian or, better, less significant first).
  */
-#define U32TONA(s, d) do {(d)[0] = (s) & 0xff; (d)[1] = ((s) >> 8) & 0xff; (d)[2] = ((s) >> 16) & 0xff; (d)[3] = ((s) >> 24) & 0xff;} while(0)
+#define U32TONA(s, d) do {\
+    (d)[0] = (s) & 0xff;\
+    (d)[1] = ((s) >> 8) & 0xff;\
+    (d)[2] = ((s) >> 16) & 0xff;\
+    (d)[3] = ((s) >> 24) & 0xff;\
+  } while(0)
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
 #define MAX_REPORT_ID 3
 
-// TODO? The longest report length can be made a multiple of the EP size (does not require an extra ZLP)
-
-// TODO? According to this:
-// http://www.microchip.com/forums/m485841.aspx
-// The host does not send ZLP for reports whose length is a multiple of the EP size.
-// Thus the OUT report lengths might be 64, 128 etc.
+/*
+ * Q: Why to use HID?
+ * A: HID uses interrupt endpoints with guaranteed latency transfers (down to 1ms for USB 2.0).
+ *    It is also driverless allowing to talk to a device from userspace using e.g. hidapi.
+ * Q: Why to use multiple reports of different lengths instead of a single report of maximum length?
+ * A: Simply to keep the transfer latency to a minimum. There are certain timings in the 802.15.4 spec
+ *    that must be met. For example sleeping devices will extract data from the coordinator using
+ *    a MAC data request command frame. The coordinator needs to respond to this request within 20ms.
+ *    The PSDU containing the data request command frame fits in a report that can be transfered in
+ *    just a single transaction (<= 1ms) to the host.
+ *    Of course this is a best case scenario. If we were busy transfering a report of maximum length
+ *    when the frame arrived, this has to wait for the current transfer to complete.
+ *    As we will see the maximum length report neededed is less than 192 bytes and its transfer takes
+ *    up to 3ms. Hopefully this worst case will not happen very often.
+ *
+ * We need to use multiple reports whose lengths may be greater than the EP size (64 bytes).
+ * We could use multiple reports whose lengths are 64, 128 and 192 but this choice has a drawback.
+ * As explained here:
+ * http://www.microchip.com/forums/m485841.aspx
+ * and here:
+ * http://stackoverflow.com/questions/8145957/multiple-hid-input-reports
+ * IN reports whose length is a multiple of the EP size (but the longest report) need to
+ * be terminated by a Zero Lenght Packet (ZLP), requiring an extra transaction.
+ * We then choose the lengths 63, 127, 192.
+ * In this way the last transaction of the report is always 1 byte less than the EP size
+ * and the transfer is complete.
+ *
+ * OUT reports does not need to follow the above rules and their lengths can be set to 64, 128, 192.
+ *
+ * For IN reports we choose the length of the report according to the following formula:
+ * 
+ * Report length = (report ID * 64) - 1 
+ */
 
 /* Report length = (report ID * 64) - 1 */
 #define REPORT_LEN(id) (((uint16_t)(id) << 6) - 1)
@@ -141,4 +174,3 @@ typedef struct {
 #define MAX_MSG_DATA_LEN MSG_DATA_LEN(MAX_REPORT_ID)
 
 #endif /* HIDRADIO_H */
-

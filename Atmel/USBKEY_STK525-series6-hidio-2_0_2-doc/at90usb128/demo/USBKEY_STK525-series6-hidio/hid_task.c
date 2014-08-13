@@ -364,7 +364,8 @@ bool is_supported_attr_id(uint8_t attr_id)
       attr_id == HR_ATTR_MAC_PROMISCUOUS_MODE ||
       attr_id == HR_ATTR_MAC_RX_ON_WHEN_IDLE ||
       attr_id == HR_ATTR_MAC_SHORT_ADDRESS ||
-      attr_id == HR_ATTR_I_AM_COORD) {
+      attr_id == HR_ATTR_I_AM_COORD ||
+      attr_id == HR_ATTR_MAC_IEEE_ADDRESS) {
     return true;
   } else {
     return false;
